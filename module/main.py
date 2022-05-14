@@ -1,4 +1,5 @@
 import socket
+import functools
 
 
 class Frame:
@@ -27,27 +28,59 @@ class Frame:
             client_socket.sendall(response)
             client_socket.close()
 
-    def method_handler(self, method, url):
-        if not method == 'GET':
-            return 'HTTP/1.0 405 Method not allowed\n\n', 405
-
-        if url not in self.urls:
-            return 'HTTP/1.0 404 Not Found\n\n', 404
-
-        return 'HTTP/1.0 200 Ok\n\n', 200
-
     def request_parser(self, request):
         request_list = request.decode('utf-8').split('\r\n')
         method, url, _ = request_list[0].split(' ')
-        headers, status_code = self.method_handler(method, url)
+
+        response, status_code = self.routing(url)
+        headers = self.get_headers(status_code)
+        return (headers + response).encode()
+
+    def get_headers(self, status_code):
         if status_code == 200:
-            return (headers + self.urls[url]()).encode()
-        if status_code == 404:
-            return (headers + '<h1>Page not found :(</h1>').encode()
-        if status_code == 405:
-            return (headers + '<h1>Method Not allowed</h1>').encode()
+            text = 'Ok'
+        elif status_code == 404:
+            text = 'Not Found'
+        else:
+            text = 'Unknown'
+        result = f'HTTP/1.0 {status_code} {text}\n\n'
+        return result
+
+    def routing(self, url):
+        if url in self.urls:
+            return self.urls[url][0](), 200
+
+        url_parts = url.split('/')
+        params_len = len(url_parts) - 2
+        params = url_parts[2:]
+        p = ''
+        if params_len > 0:
+            p = '/p' * params_len
+
+        key = ''.join(['/', url_parts[1], p])
+        if key in self.urls:
+            func, param = self.urls[key]
+            response = func(*params)
+            status_code = 200
+        else:
+            response, status_code = '<h1>Page not found :(</h1>', 404
+
+        return response, status_code
 
     @classmethod
     def route_register(cls, urls):
         for url, view in urls.items():
-            cls.urls[url] = view
+            if url == '/':
+                cls.urls[url] = (view, ())
+                continue
+            url_parts = url.split('/')
+
+            params = []
+            for i in url_parts:
+                if '<' in i:
+                    params.append(i[1:-1])
+            params_len = len(url_parts) - 2
+
+            key = ''.join(['/', url_parts[1], '/p' * params_len])
+            value = (view, tuple(params))
+            cls.urls[key] = value

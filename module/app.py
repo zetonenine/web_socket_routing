@@ -4,9 +4,8 @@ import module.views as v
 
 urls = {
     '/': v.index,
-    '/tashkent': v.tashkent,
-    '/kazan': v.kazan,
-    '/saint_petersburg': v.saint_petersburg
+    '/location': v.locations,
+    '/location/<city>': v.location
 }
 
 Frame.route_register(urls)

@@ -4,17 +4,14 @@ def index():
         return t.read()
 
 
-def tashkent():
-    with open('templates/tashkent.html') as t:
+def locations():
+    with open('templates/locations.html') as t:
         return t.read()
 
 
-def kazan():
-    with open('templates/kazan.html') as t:
-        return t.read()
-
-
-def saint_petersburg():
-    with open('templates/saint_petersburg.html') as t:
-        return t.read()
-
+def location(city):
+    try:
+        with open(f'templates/{city}.html') as t:
+            return t.read()
+    except:
+        return f"<h1>I don't know this city: {city}</h1>"
